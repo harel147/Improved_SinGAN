@@ -66,6 +66,8 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,centers=None):
 
     real = reals[len(Gs)]
+    if len(Gs) > 0:
+        prev_real = reals[len(Gs)-1]
     opt.nzx = real.shape[2]#+(opt.ker_size-1)*(opt.num_layer)
     opt.nzy = real.shape[3]#+(opt.ker_size-1)*(opt.num_layer)
     opt.receptive_field = opt.ker_size + ((opt.ker_size-1)*(opt.num_layer-1))*opt.stride
