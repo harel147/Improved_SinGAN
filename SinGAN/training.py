@@ -36,7 +36,11 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
             G_curr.load_state_dict(torch.load('%s/%d/netG.pth' % (opt.out_,scale_num-1)))
             D_curr.load_state_dict(torch.load('%s/%d/netD.pth' % (opt.out_,scale_num-1)))
 
-        z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt)
+        # full number of iterations only for the last scale
+        if scale_num < opt.stop_scale:
+            z_curr, in_s, G_curr = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,last_scale=False)
+        else:
+            z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale=True)
 
         G_curr = functions.reset_grads(G_curr,False)
         G_curr.eval()
@@ -59,7 +63,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
 
 
-def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
+def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,centers=None):
 
     real = reals[len(Gs)]
     opt.nzx = real.shape[2]#+(opt.ker_size-1)*(opt.num_layer)
@@ -198,10 +202,13 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
         if epoch % 25 == 0 or epoch == (opt.niter-1):
             print('scale %d:[%d/%d]' % (len(Gs), epoch, opt.niter))
+            print(f'rec_loss: {z_opt2plot[-1].cpu().numpy()}')
 
-        if epoch % 200 == 0 or epoch == (opt.niter-1):
-            plt.imsave(f'{opt.outf}/fake_sample_{epoch/opt.niter}.png', functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
-            plt.imsave(f'{opt.outf}/G(z_opt)_{epoch/opt.niter}.png', functions.convert_image_np(netG(Z_opt.detach(), z_prev).detach()), vmin=0, vmax=1)
+        break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
+
+        if epoch % int(opt.niter/10) == 0 or epoch == (opt.niter-1) or break_current_iter:
+            plt.imsave(f'{opt.outf}/fake_sample_{epoch}.png', functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
+            plt.imsave(f'{opt.outf}/G(z_opt)_{epoch}.png', functions.convert_image_np(netG(Z_opt.detach(), z_prev).detach()), vmin=0, vmax=1)
             #plt.imsave('%s/D_fake.png'   % (opt.outf), functions.convert_image_np(D_fake_map))
             #plt.imsave('%s/D_real.png'   % (opt.outf), functions.convert_image_np(D_real_map))
             #plt.imsave('%s/z_opt.png'    % (opt.outf), functions.convert_image_np(z_opt.detach()), vmin=0, vmax=1)
@@ -209,11 +216,14 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             #plt.imsave('%s/noise.png'    %  (opt.outf), functions.convert_image_np(noise), vmin=0, vmax=1)
             #plt.imsave('%s/z_prev.png'   % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
 
-        if epoch % 500 == 0 or epoch == (opt.niter - 1):
+        if epoch % 500 == 0 or epoch == (opt.niter - 1) or break_current_iter:
             torch.save(z_opt, '%s/z_opt.pth' % (opt.outf))
 
         schedulerD.step()
         schedulerG.step()
+
+        if break_current_iter:
+            break
 
     functions.save_networks(netG,netD,z_opt,opt)
     return z_opt,in_s,netG    
