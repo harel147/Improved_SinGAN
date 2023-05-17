@@ -269,8 +269,8 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
             if len(Gs) == 1:
                 G_z = G_z[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
             else:
-                #G_z = real_curr
-                G_z = real_curr[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
+                G_z = real_curr
+                #G_z = real_curr[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
             G_z = m_image(G_z)
             z_in = NoiseAmp[last_level] * z + G_z
             G_z = Gs[last_level](z_in.detach(), G_z)
