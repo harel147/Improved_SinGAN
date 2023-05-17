@@ -167,6 +167,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
             if (Gs == []) & (opt.mode != 'SR_train'):
                 noise = noise_
             else:
+                print(f"noise_: {noise_.shape} prev: {prev.shape}")
                 noise = opt.noise_amp*noise_+prev
 
             fake = netG(noise.detach(),prev)
@@ -219,8 +220,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
 
         # my change to faster training
         #break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
-        #break_current_iter = not last_scale and epoch > 1
-        break_current_iter = False
+        break_current_iter = not last_scale and epoch > 1
+        #break_current_iter = False
 
         if epoch % int(opt.niter/10) == 0 or epoch == (opt.niter-1) or break_current_iter:
             plt.imsave(f'{opt.outf}/fake_sample_{epoch}.png', functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
