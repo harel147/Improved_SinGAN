@@ -41,9 +41,9 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
         # full number of iterations only for the last scale
         if scale_num < opt.stop_scale:
-            z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,last_scale=False)
+            z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,last_scale=False, train_mode='rand')
         else:
-            z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale=True)
+            z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale=True, train_mode='real_train')
 
         times.append(t1)
         G_curr = functions.reset_grads(G_curr,False)
@@ -75,7 +75,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
 
 
-def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,centers=None):
+def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_mode,centers=None):
     t0 = time.time()
     real = reals[len(Gs)]
     if len(Gs) > 0:
@@ -151,7 +151,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
                     prev = z_prev
                 else:
                     #prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
-                    prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
+                    prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt)
                     prev = m_image(prev)
                     z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
                     #z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
@@ -161,7 +161,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
                     z_prev = m_image(z_prev)
             else:
                 #prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
-                prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
+                prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt)
                 prev = m_image(prev)
 
             if opt.mode == 'paint_train':
