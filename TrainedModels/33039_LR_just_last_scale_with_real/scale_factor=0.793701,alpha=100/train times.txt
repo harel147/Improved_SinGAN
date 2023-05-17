@@ -1,0 +1,11 @@
+
+level 0 time: 2.4 minuets
+level 1 time: 2.55 minuets
+level 2 time: 2.8 minuets
+level 3 time: 3.04 minuets
+level 4 time: 3.17 minuets
+level 5 time: 3.82 minuets
+level 6 time: 3.89 minuets
+level 7 time: 4.86 minuets
+level 8 time: 11.49 minuets
+total time: 38.02 minuets
