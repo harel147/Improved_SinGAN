@@ -154,6 +154,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
                     prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
                     prev = m_image(prev)
                     z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
+                    #z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
                     opt.noise_amp = opt.noise_amp_init*RMSE
@@ -222,8 +223,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
 
         # my change to faster training
         #break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
-        break_current_iter = not last_scale and epoch > 1
-        #break_current_iter = False
+        #break_current_iter = not last_scale and epoch > 1
+        break_current_iter = False
 
         if epoch % int(opt.niter/10) == 0 or epoch == (opt.niter-1) or break_current_iter:
             plt.imsave(f'{opt.outf}/fake_sample_{epoch}.png', functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
