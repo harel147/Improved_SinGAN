@@ -170,7 +170,6 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
             if (Gs == []) & (opt.mode != 'SR_train'):
                 noise = noise_
             else:
-                print(f"noise_: {noise_.shape} prev: {prev.shape}")
                 noise = opt.noise_amp*noise_+prev
 
             fake = netG(noise.detach(),prev)
@@ -274,8 +273,8 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
             G_z = m_image(G_z)
             z_in = NoiseAmp[last_level] * z + G_z
             G_z = Gs[last_level](z_in.detach(), G_z)
-            G_z = imresize(G_z, 1 / opt.scale_factor, opt)
-            real_next = reals[1:][last_level + 1]
+            G_z = imresize(G_z, 1 / (opt.scale_factor), opt)
+            real_next = reals[1:][last_level]
             G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
 
         if mode == 'rand':
