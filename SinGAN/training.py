@@ -7,8 +7,10 @@ import torch.utils.data
 import math
 import matplotlib.pyplot as plt
 from SinGAN.imresize import imresize
+import time
 
 def train(opt,Gs,Zs,reals,NoiseAmp):
+    times = []
     real_ = functions.read_image(opt)
     in_s = 0
     scale_num = 0
@@ -38,10 +40,11 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
         # full number of iterations only for the last scale
         if scale_num < opt.stop_scale:
-            z_curr, in_s, G_curr = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,last_scale=False)
+            z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,last_scale=False)
         else:
-            z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale=True)
+            z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale=True)
 
+        times.append(t1)
         G_curr = functions.reset_grads(G_curr,False)
         G_curr.eval()
         D_curr = functions.reset_grads(D_curr,False)
@@ -59,12 +62,20 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         scale_num+=1
         nfc_prev = opt.nfc
         del D_curr,G_curr
+
+    times_str = ""
+    for i,t in enumerate(times):
+        times_str += f"\nlevel {i} time: {t} minuets"
+    times_str += f"\ntotal time: {round(sum(times),2)} minuets"
+    print(times_str)
+    with open(f"{opt.out_}/train times.txt", 'w') as f:
+        f.write(times_str)
     return
 
 
 
 def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,centers=None):
-
+    t0 = time.time()
     real = reals[len(Gs)]
     if len(Gs) > 0:
         prev_real = reals[len(Gs)-1]
@@ -207,8 +218,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
             print(f'rec_loss: {z_opt2plot[-1].cpu().numpy()}')
 
         # my change to faster training
-        break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
-        #break_current_iter = False
+        #break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
+        break_current_iter = False
 
         if epoch % int(opt.niter/10) == 0 or epoch == (opt.niter-1) or break_current_iter:
             plt.imsave(f'{opt.outf}/fake_sample_{epoch}.png', functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
@@ -230,7 +241,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,center
             break
 
     functions.save_networks(netG,netD,z_opt,opt)
-    return z_opt,in_s,netG    
+    t1 = round((time.time()-t0)/60,2)
+    return z_opt,in_s,netG, t1
 
 def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
     G_z = in_s
@@ -295,7 +307,7 @@ def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
 
             D_curr,G_curr = init_models(opt)
 
-            z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals[:scale_num+1],Gs[:scale_num],Zs[:scale_num],in_s,NoiseAmp[:scale_num],opt,centers=centers)
+            z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals[:scale_num+1],Gs[:scale_num],Zs[:scale_num],in_s,NoiseAmp[:scale_num],opt,centers=centers)
 
             G_curr = functions.reset_grads(G_curr,False)
             G_curr.eval()
