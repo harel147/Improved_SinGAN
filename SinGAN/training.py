@@ -41,9 +41,13 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
         # full number of iterations only for the last scale
         if scale_num < opt.stop_scale:
-            z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,last_scale=False, train_mode='rand')
+            z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,
+                                      last_scale=False, train_mode='rand', train_rec_mode='rec',
+                                      first_scales_early_stop_type='none')
         else:
-            z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale=True, train_mode='real_train')
+            z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,
+                                    last_scale=True, train_mode='real_train', train_rec_mode='real_train_rec',
+                                    first_scales_early_stop_type='none')
 
         times.append(t1)
         G_curr = functions.reset_grads(G_curr,False)
@@ -75,7 +79,7 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
 
 
-def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_mode,centers=None):
+def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_mode,train_rec_mode,first_scales_early_stop_type='none',centers=None):
     t0 = time.time()
     real = reals[len(Gs)]
     if len(Gs) > 0:
@@ -153,7 +157,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
                     #prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
                     prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt)
                     prev = m_image(prev)
-                    z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
+                    #z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
+                    z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_rec_mode, m_noise, m_image, opt)
                     #z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
@@ -222,9 +227,12 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
             print(f'rec_loss: {z_opt2plot[-1].cpu().numpy()}')
 
         # my change to faster training
-        #break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
-        #break_current_iter = not last_scale and epoch > 1
-        break_current_iter = False
+        if first_scales_early_stop_type == 'small_rec_loss':
+            break_current_iter = not last_scale and epoch > 199 and z_opt2plot[-1].cpu().numpy() < 0.025
+        if first_scales_early_stop_type == 'dont_train':
+            break_current_iter = not last_scale and epoch > 1
+        if first_scales_early_stop_type == 'none':
+            break_current_iter = False
 
         if epoch % int(opt.niter/10) == 0 or epoch == (opt.niter-1) or break_current_iter:
             plt.imsave(f'{opt.outf}/fake_sample_{epoch}.png', functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
@@ -273,6 +281,21 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
                 #G_z = real_curr[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
             G_z = m_image(G_z)
             z_in = NoiseAmp[last_level] * z + G_z
+            G_z = Gs[last_level](z_in.detach(), G_z)
+            G_z = imresize(G_z, 1 / (opt.scale_factor), opt)
+            real_next = reals[1:][last_level]
+            G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
+
+        if mode == 'real_train_rec':
+            last_level = len(Gs) - 1
+            real_curr = reals[last_level]
+            if len(Gs) == 1:
+                G_z = G_z[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
+            else:
+                G_z = real_curr
+            G_z = m_image(G_z)
+            Z_opt = Zs[last_level]
+            z_in = NoiseAmp[last_level] * Z_opt + G_z
             G_z = Gs[last_level](z_in.detach(), G_z)
             G_z = imresize(G_z, 1 / (opt.scale_factor), opt)
             real_next = reals[1:][last_level]
