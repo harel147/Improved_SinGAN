@@ -42,12 +42,12 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         # full number of iterations only for the last scale
         if scale_num < opt.stop_scale:
             z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,
-                                      last_scale=False, train_mode='rand', train_rec_mode='real_train_rec',
-                                      first_scales_early_stop_type='none')
+                                      last_scale=False, train_mode='rand', train_rec_mode='rec',
+                                      first_scales_early_stop_type='none', upsample_type='sr',rec_upsample_type='sr')
         else:
             z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,
-                                    last_scale=True, train_mode='rand', train_rec_mode='real_train_rec',
-                                    first_scales_early_stop_type='none')
+                                    last_scale=True, train_mode='rand', train_rec_mode='rec',
+                                    first_scales_early_stop_type='none', upsample_type='sr',rec_upsample_type='sr')
 
         times.append(t1)
         G_curr = functions.reset_grads(G_curr,False)
@@ -79,7 +79,8 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
 
 
 
-def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_mode,train_rec_mode,first_scales_early_stop_type='none',centers=None):
+def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_mode,train_rec_mode,first_scales_early_stop_type,
+                       upsample_type,rec_upsample_type,centers=None):
     t0 = time.time()
     real = reals[len(Gs)]
     if len(Gs) > 0:
@@ -155,10 +156,12 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
                     prev = z_prev
                 else:
                     #prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
-                    prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt)
+                    prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt,
+                                       upsample_type=upsample_type, rec_upsample_type=rec_upsample_type)
                     prev = m_image(prev)
                     #z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
-                    z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_rec_mode, m_noise, m_image, opt)
+                    z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_rec_mode, m_noise, m_image, opt,
+                                         upsample_type=upsample_type, rec_upsample_type=rec_upsample_type)
                     #z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
@@ -166,7 +169,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
                     z_prev = m_image(z_prev)
             else:
                 #prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
-                prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt)
+                prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_mode, m_noise, m_image, opt,
+                                   upsample_type=upsample_type, rec_upsample_type=rec_upsample_type)
                 prev = m_image(prev)
 
             if opt.mode == 'paint_train':
@@ -257,7 +261,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
     t1 = round((time.time()-t0)/60,2)
     return z_opt,in_s,netG, t1
 
-def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
+def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt,upsample_type,rec_upsample_type):
     G_z = in_s
     if len(Gs) > 0:
         if mode == 'real_train':
@@ -286,6 +290,15 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
             real_next = reals[1:][last_level]
             G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
 
+            if upsample_type == 'sr':
+                G_z = m_image(G_z)
+                z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]],
+                                             device=opt.device)
+                z = m_noise(z)
+                z_in = NoiseAmp[last_level] * z + G_z
+                G_z = Gs[last_level](z_in.detach(), G_z)
+                G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
+
         if mode == 'real_train_rec':
             last_level = len(Gs) - 1
             real_curr = reals[last_level]
@@ -300,6 +313,46 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
             G_z = imresize(G_z, 1 / (opt.scale_factor), opt)
             real_next = reals[1:][last_level]
             G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
+
+            if rec_upsample_type == 'sr':
+                G_z = m_image(G_z)
+                z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]],
+                                             device=opt.device)
+                z = m_noise(z)
+                z_in = NoiseAmp[last_level] * z + G_z
+                G_z = Gs[last_level](z_in.detach(), G_z)
+                G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
+
+        # if mode == 'rand_with_sr':
+        #     count = 0
+        #     pad_noise = int(((opt.ker_size - 1) * opt.num_layer) / 2)
+        #     if opt.mode == 'animation_train':
+        #         pad_noise = 0
+        #
+        #     for G, Z_opt, real_curr, real_next, noise_amp in zip(Gs, Zs, reals, reals[1:], NoiseAmp):
+        #         if count == 0:
+        #             z = functions.generate_noise([1, Z_opt.shape[2] - 2 * pad_noise, Z_opt.shape[3] - 2 * pad_noise],
+        #                                          device=opt.device)
+        #             z = z.expand(1, 3, z.shape[2], z.shape[3])
+        #         else:
+        #             z = functions.generate_noise(
+        #                 [opt.nc_z, Z_opt.shape[2] - 2 * pad_noise, Z_opt.shape[3] - 2 * pad_noise], device=opt.device)
+        #         z = m_noise(z)
+        #         G_z = G_z[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
+        #         G_z = m_image(G_z)
+        #         z_in = noise_amp * z + G_z
+        #         G_z = G(z_in.detach(), G_z)
+        #         G_z = imresize(G_z, 1 / opt.scale_factor, opt)
+        #         G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
+        #         count += 1
+        #
+        #         if G == Gs[-1]:
+        #             G_z = m_image(G_z)
+        #             z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]], device=opt.device)
+        #             z = m_noise(z)
+        #             z_in = noise_amp*z+G_z
+        #             G_z = G(z_in.detach(), G_z)
+        #             G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
 
         if mode == 'rand':
             count = 0
@@ -320,6 +373,16 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
                 G_z = imresize(G_z,1/opt.scale_factor,opt)
                 G_z = G_z[:,:,0:real_next.shape[2],0:real_next.shape[3]]
                 count += 1
+                if upsample_type == 'sr':
+                    if G == Gs[-1]:
+                        G_z = m_image(G_z)
+                        z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]],
+                                                     device=opt.device)
+                        z = m_noise(z)
+                        z_in = noise_amp * z + G_z
+                        G_z = G(z_in.detach(), G_z)
+                        G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
+
         if mode == 'rec':
             count = 0
             for G,Z_opt,real_curr,real_next,noise_amp in zip(Gs,Zs,reals,reals[1:],NoiseAmp):
@@ -332,7 +395,18 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt):
                 #if count != (len(Gs)-1):
                 #    G_z = m_image(G_z)
                 count += 1
+
+                if rec_upsample_type == 'sr':
+                    if G == Gs[-1]:
+                        G_z = m_image(G_z)
+                        z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]],
+                                                     device=opt.device)
+                        z = m_noise(z)
+                        z_in = noise_amp * z + G_z
+                        G_z = G(z_in.detach(), G_z)
+                        G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
     return G_z
+
 
 def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
     in_s = torch.full(reals[0].shape, 0, device=opt.device)
