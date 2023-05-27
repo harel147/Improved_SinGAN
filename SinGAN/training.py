@@ -42,11 +42,11 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         # full number of iterations only for the last scale
         if scale_num < opt.stop_scale:
             z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,
-                                      last_scale=False, train_mode='rand', train_rec_mode='rec',
+                                      last_scale=False, train_mode='rand', train_rec_mode='real_train_rec',
                                       first_scales_early_stop_type='none')
         else:
             z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,
-                                    last_scale=True, train_mode='real_train', train_rec_mode='real_train_rec',
+                                    last_scale=True, train_mode='rand', train_rec_mode='real_train_rec',
                                     first_scales_early_stop_type='none')
 
         times.append(t1)
