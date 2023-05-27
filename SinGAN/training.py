@@ -161,7 +161,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
                     prev = m_image(prev)
                     #z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
                     z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, train_rec_mode, m_noise, m_image, opt,
-                                         upsample_type=upsample_type, rec_upsample_type=rec_upsample_type)
+                                         upsample_type=upsample_type, rec_upsample_type=rec_upsample_type, fixed_z_for_sr_upsample=z_opt)
                     #z_prev = draw_concat(Gs, Zs, reals, NoiseAmp, in_s, 'real_train', m_noise, m_image, opt)
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
@@ -261,7 +261,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,last_scale,train_
     t1 = round((time.time()-t0)/60,2)
     return z_opt,in_s,netG, t1
 
-def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt,upsample_type,rec_upsample_type):
+def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt,upsample_type,rec_upsample_type,fixed_z_for_sr_upsample=None):
     G_z = in_s
     if len(Gs) > 0:
         if mode == 'real_train':
@@ -316,43 +316,10 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt,upsample_type
 
             if rec_upsample_type == 'sr':
                 G_z = m_image(G_z)
-                z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]],
-                                             device=opt.device)
-                z = m_noise(z)
+                z = fixed_z_for_sr_upsample
                 z_in = NoiseAmp[last_level] * z + G_z
                 G_z = Gs[last_level](z_in.detach(), G_z)
                 G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
-
-        # if mode == 'rand_with_sr':
-        #     count = 0
-        #     pad_noise = int(((opt.ker_size - 1) * opt.num_layer) / 2)
-        #     if opt.mode == 'animation_train':
-        #         pad_noise = 0
-        #
-        #     for G, Z_opt, real_curr, real_next, noise_amp in zip(Gs, Zs, reals, reals[1:], NoiseAmp):
-        #         if count == 0:
-        #             z = functions.generate_noise([1, Z_opt.shape[2] - 2 * pad_noise, Z_opt.shape[3] - 2 * pad_noise],
-        #                                          device=opt.device)
-        #             z = z.expand(1, 3, z.shape[2], z.shape[3])
-        #         else:
-        #             z = functions.generate_noise(
-        #                 [opt.nc_z, Z_opt.shape[2] - 2 * pad_noise, Z_opt.shape[3] - 2 * pad_noise], device=opt.device)
-        #         z = m_noise(z)
-        #         G_z = G_z[:, :, 0:real_curr.shape[2], 0:real_curr.shape[3]]
-        #         G_z = m_image(G_z)
-        #         z_in = noise_amp * z + G_z
-        #         G_z = G(z_in.detach(), G_z)
-        #         G_z = imresize(G_z, 1 / opt.scale_factor, opt)
-        #         G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
-        #         count += 1
-        #
-        #         if G == Gs[-1]:
-        #             G_z = m_image(G_z)
-        #             z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]], device=opt.device)
-        #             z = m_noise(z)
-        #             z_in = noise_amp*z+G_z
-        #             G_z = G(z_in.detach(), G_z)
-        #             G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
 
         if mode == 'rand':
             count = 0
@@ -399,9 +366,7 @@ def draw_concat(Gs,Zs,reals,NoiseAmp,in_s,mode,m_noise,m_image,opt,upsample_type
                 if rec_upsample_type == 'sr':
                     if G == Gs[-1]:
                         G_z = m_image(G_z)
-                        z = functions.generate_noise([opt.nc_z, real_next.shape[2], real_next.shape[3]],
-                                                     device=opt.device)
-                        z = m_noise(z)
+                        z = fixed_z_for_sr_upsample
                         z_in = noise_amp * z + G_z
                         G_z = G(z_in.detach(), G_z)
                         G_z = G_z[:, :, 0:real_next.shape[2], 0:real_next.shape[3]]
