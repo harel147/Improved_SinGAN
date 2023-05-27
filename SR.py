@@ -11,6 +11,18 @@ if __name__ == '__main__':
     parser.add_argument('--input_name', help='training image name', default="33039_LR.png")#required=True)
     parser.add_argument('--sr_factor', help='super resolution factor', type=float, default=4)
     parser.add_argument('--mode', help='task to be done', default='SR')
+
+    # new parameters
+    parser.add_argument('--first_scales_early_stop_type', help='none, dont_train, small_rec_loss', default='none')
+    parser.add_argument('--first_scales_train_mode', help='rand, real_train', default='rand')
+    parser.add_argument('--last_scale_train_mode', help='rand, real_train', default='rand')
+    parser.add_argument('--first_scales_train_rec_mode', help='rec, real_train_rec', default='rec')
+    parser.add_argument('--last_scale_train_rec_mode', help='rec, real_train_rec', default='rec')
+    parser.add_argument('--first_scales_upsample_type', help='regular, sr', default='regular')
+    parser.add_argument('--last_scale_upsample_type', help='regular, sr', default='regular')
+    parser.add_argument('--first_scales_rec_upsample_type', help='regular, sr', default='regular')
+    parser.add_argument('--last_scale_rec_upsample_type', help='regular, sr', default='regular')
+
     opt = parser.parse_args()
     opt = functions.post_config(opt)
     Gs = []

@@ -42,12 +42,14 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         # full number of iterations only for the last scale
         if scale_num < opt.stop_scale:
             z_curr, in_s, G_curr,t1 = train_single_scale(D_curr, G_curr, reals, Gs, Zs, in_s, NoiseAmp, opt,
-                                      last_scale=False, train_mode='rand', train_rec_mode='rec',
-                                      first_scales_early_stop_type='none', upsample_type='sr',rec_upsample_type='sr')
+                                      last_scale=False, train_mode=opt.first_scales_train_mode, train_rec_mode=opt.first_scales_train_rec_mode,
+                                      first_scales_early_stop_type=opt.first_scales_early_stop_type, upsample_type=opt.first_scales_upsample_type,
+                                                         rec_upsample_type=opt.first_scales_rec_upsample_type)
         else:
             z_curr,in_s,G_curr,t1 = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt,
-                                    last_scale=True, train_mode='rand', train_rec_mode='rec',
-                                    first_scales_early_stop_type='none', upsample_type='sr',rec_upsample_type='sr')
+                                    last_scale=True, train_mode=opt.last_scale_train_mode, train_rec_mode=opt.last_scale_train_rec_mode,
+                                    first_scales_early_stop_type=opt.first_scales_early_stop_type, upsample_type=opt.last_scale_upsample_type,
+                                                       rec_upsample_type=opt.last_scale_rec_upsample_type)
 
         times.append(t1)
         G_curr = functions.reset_grads(G_curr,False)
