@@ -46,8 +46,5 @@ python ./SR.py --input_name cows_LR.png --sr_factor 8 --first_scales_train_mode 
 mv ./Output/SR/8.0/cows_LR_HR.png ./TrainedModels/cows_LR_upsample_sr_i/cows_LR_HR_factor_8.png
 
 
-
-
-
 #python ./SR.py --input_name colusseum_LR.png && python ./SR.py --input_name colusseum_LR.png --sr_factor 8 &&
 #python ./SR.py --input_name cows_LR.png && python ./SR.py --input_name cows_LR.png --sr_factor 8
