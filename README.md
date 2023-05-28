@@ -6,7 +6,7 @@ This project is built upon the research paper and repository SinGAN, developed b
 
 This project is the result of Harel Mendelman's personal endeavor, undertaken exclusively for the purpose of study.
 
-In this project, my objective was to identify and implement improvements to the original SinGAN architecture. The outcomes of my research can be accessed through the following [link](https://harel147.github.io/html_research_results/index.html). I have developed a dedicated website to effectively organize and present the research results.
+In this project, my primary goal was to enhance the original SinGAN architecture. To ensure a comprehensive and organized presentation of my research results, I have created a dedicated website accessible at the following link: https://harel147.github.io/html_research_results/index.html
 
 In this project, my primary focus was on the super-resolution aspect of SinGAN. To achieve this, I introduced new parameters to the original SR.py script, allowing for better control and customization. These additions enable more precise adjustments and enhancements to the super-resolution capabilities of SinGAN.
 
