@@ -12,16 +12,16 @@ In this project, my primary focus was on the super-resolution aspect of SinGAN. 
 
 ## The new parameters
 
-To modify the training of the first scales in SinGAN, set "first_scales_early_stop_type" to "dont_train" to skip their training, "small_rec_loss" to halt training when a specific reconstruction loss is reached, or "none" for the original SinGAN training.
+To modify the training of the first scales in SinGAN, set `first_scales_early_stop_type` to "dont_train" to skip their training, "small_rec_loss" to halt training when a specific reconstruction loss is reached, or "none" for the original SinGAN training.
 ```
 python SR.py --first_scales_early_stop_type <none, dont_train, small_rec_loss>
 ```
 
-To replicate the training approach of the original SinGAN, and train the first scales with images generated from the previous scales, set "first_scales_train_mode" to "rand"; however, if you want to train the first scales using the real image from the last scale, set it to "real_train".
+To replicate the training approach of the original SinGAN, and train the first scales with images generated from the previous scales, set `first_scales_train_mode` to "rand"; however, if you want to train the first scales using the real image from the last scale, set it to "real_train".
 ```
 python SR.py --first_scales_train_mode <rand, real_train>
 ```
-To replicate the training approach of the original SinGAN, and train the last scale with images generated from the previous scales, set "first_scales_train_mode" to "rand"; however, if you want to train the last scale using the real image from the last scale, set it to "real_train".
+To replicate the training approach of the original SinGAN, and train the last scale with images generated from the previous scales, set `first_scales_train_mode` to "rand"; however, if you want to train the last scale using the real image from the last scale, set it to "real_train".
 ```
 python SR.py --last_scale_train_mode <rand, real_train>
 ```
